@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 
 @Composable
 fun RemoteScreen(
@@ -31,15 +32,9 @@ fun RemoteScreen(
     onDisconnect: () -> Unit,
     onTogglePin: () -> Unit,
     onTogglePointerCapture: (Boolean) -> Unit,
+    onDebugEvent: (String) -> Unit = {},
 ) {
     val frameBytes by frameFlow.collectAsState()
-    val config = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    val screenWidthPx = with(density) { config.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { config.screenHeightDp.dp.toPx() }
-    val scaleX = remoteWidth.toFloat() / screenWidthPx
-    val scaleY = remoteHeight.toFloat() / screenHeightPx
 
     var showToolbar by remember { mutableStateOf(true) }
     var showKeyboard by remember { mutableStateOf(false) }
@@ -62,37 +57,68 @@ fun RemoteScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
+                            var lastHoverTime = 0L
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Move) {
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastHoverTime > 30) {
+                                            lastHoverTime = now
+                                            val pos = event.changes.first().position
+                                            val sX = remoteWidth.toFloat() / size.width
+                                            val sY = remoteHeight.toFloat() / size.height
+                                            val x = (pos.x * sX).toInt()
+                                            val y = (pos.y * sY).toInt()
+                                            onDebugEvent("[Hover] x:$x y:$y")
+                                            wsClient.sendMouseMove(x, y)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = { offset ->
-                                    wsClient.sendMouseMove(
-                                        (offset.x * scaleX).toInt(),
-                                        (offset.y * scaleY).toInt(),
-                                    )
+                                    val sX = remoteWidth.toFloat() / size.width
+                                    val sY = remoteHeight.toFloat() / size.height
+                                    val x = (offset.x * sX).toInt()
+                                    val y = (offset.y * sY).toInt()
+                                    wsClient.sendMouseMove(x, y)
                                     wsClient.sendMouseClick(1)
                                 },
                                 onLongPress = { offset ->
-                                    wsClient.sendMouseMove(
-                                        (offset.x * scaleX).toInt(),
-                                        (offset.y * scaleY).toInt(),
-                                    )
+                                    val sX = remoteWidth.toFloat() / size.width
+                                    val sY = remoteHeight.toFloat() / size.height
+                                    val x = (offset.x * sX).toInt()
+                                    val y = (offset.y * sY).toInt()
+                                    wsClient.sendMouseMove(x, y)
                                     wsClient.sendMouseClick(3)
                                 },
                                 onDoubleTap = { offset ->
-                                    wsClient.sendMouseMove(
-                                        (offset.x * scaleX).toInt(),
-                                        (offset.y * scaleY).toInt(),
-                                    )
+                                    val sX = remoteWidth.toFloat() / size.width
+                                    val sY = remoteHeight.toFloat() / size.height
+                                    val x = (offset.x * sX).toInt()
+                                    val y = (offset.y * sY).toInt()
+                                    wsClient.sendMouseMove(x, y)
                                     wsClient.sendMouseClick(1)
                                     wsClient.sendMouseClick(1)
                                 },
                             )
                         }
                         .pointerInput(Unit) {
+                            var lastTime = 0L
                             detectDragGestures { change, _ ->
-                                wsClient.sendMouseMove(
-                                    (change.position.x * scaleX).toInt(),
-                                    (change.position.y * scaleY).toInt(),
-                                )
+                                val now = System.currentTimeMillis()
+                                if (now - lastTime > 40) { // Max ~25 fps para evitar saturar ydotool
+                                    lastTime = now
+                                    val sX = remoteWidth.toFloat() / size.width
+                                    val sY = remoteHeight.toFloat() / size.height
+                                    val x = (change.position.x * sX).toInt()
+                                    val y = (change.position.y * sY).toInt()
+                                    onDebugEvent("[Drag] x:$x y:$y")
+                                    wsClient.sendMouseMove(x, y)
+                                }
                             }
                         },
                 ) {

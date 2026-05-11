@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,13 +38,14 @@ private val Danger     = Color(0xFFF85149)
 @Composable
 fun ConnectScreen(
     connectionState: ConnectionState,
-    onConnect: (ip: String, token: String) -> Unit,
+    onConnect: (ip: String, token: String, resolution: String) -> Unit,
     onDisconnect: () -> Unit,
 ) {
     // Valores por defecto precargados para el usuario
     var ip by remember { mutableStateOf("100.107.167.88") }
     var token by remember { mutableStateOf("cambia-este-token-secreto") }
     var showToken by remember { mutableStateOf(false) }
+    var resolution by remember { mutableStateOf("1080p") }
 
     val isConnected = connectionState is ConnectionState.Connected
     val isConnecting = connectionState is ConnectionState.Connecting
@@ -142,6 +144,43 @@ fun ConnectScreen(
                     }
                 }
 
+                // ─── Selector de Resolución ───────────────────────────────────
+                AnimatedVisibility(!isConnected && !isConnecting) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Resolución de captura", color = TextSecond, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF30363D))
+                                .padding(4.dp)
+                        ) {
+                            val resOptions = listOf("720p", "1080p")
+                            resOptions.forEach { res ->
+                                val isSelected = resolution == res
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) AccentGlow else Color.Transparent)
+                                        .clickable { resolution = res }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = res,
+                                        color = if (isSelected) Color.White else TextSecond,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // ─── Error ────────────────────────────────────────────────────
                 AnimatedVisibility(
                     visible = errorMsg != null,
@@ -167,7 +206,7 @@ fun ConnectScreen(
                 Button(
                     onClick = {
                         if (isConnected) onDisconnect()
-                        else onConnect(ip.trim(), token.trim())
+                        else onConnect(ip.trim(), token.trim(), resolution)
                     },
                     enabled = !isConnecting,
                     modifier = Modifier

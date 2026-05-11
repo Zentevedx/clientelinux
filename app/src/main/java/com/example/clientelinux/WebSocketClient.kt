@@ -39,11 +39,12 @@ class RemoteWebSocketClient {
 
     // ─── Conexión ────────────────────────────────────────────────────────────
 
-    fun connect(ip: String, port: Int = 8765, token: String) {
+    fun connect(ip: String, port: Int = 8765, token: String, resolution: String = "1080p") {
         if (_state.value is ConnectionState.Connected || _state.value is ConnectionState.Connecting) return
         _state.value = ConnectionState.Connecting
 
-        val url = "ws://$ip:$port/ws?token=$token"
+        val resVal = if (resolution == "720p") "720" else "1080"
+        val url = "ws://$ip:$port/ws?token=$token&resolution=$resVal"
         Log.i(TAG, "Conectando a $url")
 
         val request = Request.Builder().url(url).build()

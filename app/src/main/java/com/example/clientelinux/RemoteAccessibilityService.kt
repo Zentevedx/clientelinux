@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 class RemoteAccessibilityService : AccessibilityService() {
 
     companion object {
-        private val _keyEvents = MutableSharedFlow<KeyEvent>(extraBufferCapacity = 64)
+        private val _keyEvents = MutableSharedFlow<KeyEvent>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+        )
         val keyEvents = _keyEvents.asSharedFlow()
 
         private val _isServiceActive = MutableStateFlow(false)
