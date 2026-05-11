@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">clienteLinux</string>
+    <string name="accessibility_service_description">Captura el teclado completo para enviarlo al escritorio remoto en Linux.</string>
+</resources>
